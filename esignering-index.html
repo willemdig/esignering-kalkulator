@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>eSignering – gevinstkalkulator (prototype)</title>
+  <style>
+    :root { --gap: 14px; --radius: 12px; --border: #d7dbe0; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#f6f7f9; color:#111; }
+    header { background:#fff; border-bottom: 1px solid var(--border); padding: 18px 16px; position: sticky; top: 0; z-index: 10; }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 6px 0 0; color:#444; font-size: 13px; }
+    main { max-width: 980px; margin: 18px auto; padding: 0 16px 40px; display: grid; gap: var(--gap); grid-template-columns: 2fr 1fr; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } header { position: static; } }
+
+    .card { background:#fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: 0 1px 0 rgba(0,0,0,0.04); }
+    .card h2 { margin: 0 0 10px; font-size: 16px; }
+    .muted { color:#555; font-size: 13px; }
+    .small { font-size: 12px; color:#666; }
+
+    .steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 0; }
+    .chip { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; background:#fff; }
+    .chip.active { border-color:#111; }
+    .chip.done { background:#f0f3f6; }
+
+    form { display: grid; gap: 12px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+
+    label { display: grid; gap: 6px; font-size: 13px; }
+    input[type="number"], select {
+      padding: 10px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; background:#fff;
+    }
+    input[type="checkbox"] { transform: translateY(1px); }
+    .row { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btnbar { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      border: 1px solid #111; background:#111; color:#fff; padding: 10px 12px; border-radius: 10px; cursor:pointer; font-size: 14px;
+    }
+    button.secondary { background:#fff; color:#111; }
+    button.ghost { background:transparent; color:#111; border-color: var(--border); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .warn { border-left: 4px solid #4b7; background:#f6fffa; padding: 10px 12px; border-radius: 10px; border: 1px solid #cfeee0; }
+    .kpi { display: grid; gap: 10px; }
+    .kpi .item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .kpi .item .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    .kpi .item .t { font-size: 12px; color:#555; }
+
+    table { width:100%; border-collapse: collapse; font-size: 13px; }
+    td { border-top: 1px solid var(--border); padding: 10px 6px; vertical-align: top; }
+    td:first-child { color:#444; width: 55%; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+    .hide { display:none; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>eSignering – gevinstkalkulator (HTML-prototype)</h1>
+  <p class="muted">Estimerer tidsgevinster og nettoeffekt ved overgang til eSignering.</p>
+  <div class="steps" id="stepChips"></div>
+</header>
+
+<main>
+  <section class="card">
+    <h2 id="stepTitle">Steg</h2>
+    <div class="muted" id="stepHint"></div>
+
+    <div id="errorBox" class="warn hide" role="alert" aria-live="polite" style="border-left-color:#c77;background:#fff7f7;border-color:#f0caca;"></div>
+
+    <div id="stepsWrap">
+
+      <!-- Step 1 -->
+      <div class="step" data-step="1">
+        <form id="form1">
+          <div class="grid2">
+            <label>
+              Antall dokument som krever signatur per år
+              <input type="number" min="0" step="1" id="docsPerYear" />
+              <div class="small">Omtrentlig er helt OK (f.eks. 2 500).</div>
+            </label>
+
+            <label>
+              Gjennomsnittlig antall signatarer per dokument
+              <select id="signersAvg">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3+</option>
+              </select>
+              <div class="small">Bruk 3+ hvis dere ofte har flere enn 2.</div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Kostnad per elektronisk signatur (kr)
+              <input type="number" min="0" step="1" id="eSignCostPerSignature" />
+              <div class="small">Default: 65 kr per signatur.</div>
+            </label>
+
+            <label>
+              Kostnad per manuell signatur (kr)
+              <input type="number" min="0" step="1" id="manualCostPerSignature" />
+              <div class="small">Sett 0 hvis du kun vil regne eSign-kost som merkost.</div>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step hide" data-step="2">
+        <form id="form2">
+          <div class="row">
+            <label class="row" style="gap:8px;">
+              <input type="checkbox" id="useDefaults" />
+              Bruk standardverdier (anbefalt)
+            </label>
+            <span class="small">Antakelsene blir vist, og kan justeres etter skjønn.</span>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Dagens prosess: minutter brukt per dokument (sum)
+              <input type="number" min="0" step="1" id="minCurrentTotal" />
+              <div class="small">Default: 18 min (klargjøring, utsendelse, purring, mottak/journal).</div>
+            </label>
+
+            <label>
+              Med eSignering: minutter brukt per dokument (sum)
+              <input type="number" min="0" step="1" id="minFutureTotal" />
+              <div class="small">Default: 6 min (opprett, send, oppfølging, journal).</div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Ekstra minutter per ekstra signatar (utover 1) – i dag
+              <input type="number" min="0" step="1" id="minExtraSignerCurrent" />
+              <div class="small">Default: 4 min per ekstra signatar.</div>
+            </label>
+
+            <label>
+              Ekstra minutter per ekstra signatar (utover 1) – med eSignering
+              <input type="number" min="0" step="1" id="minExtraSignerFuture" />
+              <div class="small">Default: 1 min per ekstra signatar.</div>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step hide" data-step="3">
+        <form id="form3">
+          <div class="grid2">
+            <label>
+              Timekost (kr per time)
+              <input type="number" min="0" step="10" id="hourlyRate" />
+              <div class="small">For omregning til kr: bruk intern kalkyle (f.eks. 650).</div>
+            </label>
+
+            <label>
+              Timer per årsverk
+              <input type="number" min="1" step="1" id="hoursPerFTE" />
+              <div class="small">Default: 1 750 timer per årsverk.</div>
+            </label>
+          </div>
+
+          <label class="row" style="gap:10px;">
+            <input type="checkbox" id="includeCitizenTime" />
+            Inkluder estimat for “timer spart for innbyggere/brukere”
+            <span class="small">(valgfritt)</span>
+          </label>
+
+          <div id="citizenWrap" class="grid2 hide">
+            <label>
+              Minutter spart per oppdrag for innbygger/bruker
+              <input type="number" min="0" step="1" id="minCitizenSaved" />
+              <div class="small">Default: 5 min.</div>
+            </label>
+
+            <label>
+              Andel oppdrag som gjelder innbygger/bruker (%)
+              <input type="number" min="0" max="100" step="1" id="citizenShare" />
+              <div class="small">Default: 50%.</div>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step hide" data-step="4">
+        <form id="form4">
+          <div class="grid2">
+            <label>
+              Engangskostnad (kr)
+              <input type="number" min="0" step="1000" id="oneOffCost" />
+              <div class="small">Integrasjon/prosjekt/opplæring.</div>
+            </label>
+
+            <label>
+              Årlig drifts-/forvaltningskostnad (kr per år)
+              <input type="number" min="0" step="1000" id="annualCost" />
+              <div class="small">Abonnement, lisens, intern forvaltning.</div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Analysehorisont (år)
+              <input type="number" min="1" step="1" id="years" />
+              <div class="small">Default: 3 år.</div>
+            </label>
+
+            <label>
+              Diskonteringsrente (%)
+              <input type="number" min="0" step="0.1" id="discountRate" />
+              <div class="small">Default: 4.0% (enkel NPV i prototypen).</div>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step hide" data-step="5">
+        <div class="kpi" id="kpis"></div>
+
+        <div class="card" style="margin-top: 12px; border-radius: 14px;">
+          <h2 style="margin-top:0;">Oppsummering av input</h2>
+          <table id="summaryTable"></table>
+
+          <div class="small" style="margin-top:10px;">
+            Dette er en forenklet prototype. Faktiske gevinster avhenger av volum, prosessendring og faktisk bruk.
+          </div>
+
+          <div class="btnbar" style="margin-top:12px;">
+            <button class="secondary" id="btnPrint" type="button">Skriv ut (PDF via print)</button>
+            <button class="ghost" id="btnExport" type="button">Eksporter JSON</button>
+            <button class="ghost" id="btnReset" type="button">Nullstill</button>
+          </div>
+
+          <pre class="mono hide" id="exportBox"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="btnbar">
+      <button class="secondary" id="btnPrev" type="button">Tilbake</button>
+      <button id="btnNext" type="button">Neste</button>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h2>Live-resultat</h2>
+    <div class="muted">Oppdaterer seg mens du fyller inn.</div>
+    <div style="height:10px"></div>
+    <div class="kpi" id="sideKpis"></div>
+
+    <div style="height:14px"></div>
+    <div class="warn">
+      <div><strong>Tips til utfylling</strong></div>
+      <div class="small" style="margin-top:6px;">
+        Start gjerne med standardverdier. Antakelsene blir vist, og kan justeres etter skjønn.
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script>
+(function () {
+  const LS_KEY = "esignering_gains_proto_v2";
+
+  const steps = [
+    { n: 1, title: "Steg 1: Volum og signaturkost", hint: "Oppgi antall dokument, antall signatarer, og enhetskost per signatur." },
+    { n: 2, title: "Steg 2: Tidsbruk (i dag vs eSignering)", hint: "Bruk standardverdier eller legg inn egne anslag." },
+    { n: 3, title: "Steg 3: Omregning (kr, årsverk) + valgfri bruker-tid", hint: "Timekost og årsverkfaktor gir kr/årsverk-estimat." },
+    { n: 4, title: "Steg 4: Kostnader og horisont", hint: "Enkelt kostnadsbilde for å få en grov nettoeffekt." },
+    { n: 5, title: "Steg 5: Oppsummering", hint: "Se resultat, sjekk input, og eksporter/skriv ut." }
+  ];
+
+  const $ = (id) => document.getElementById(id);
+
+  const inputs = {
+    docsPerYear: $("docsPerYear"),
+    signersAvg: $("signersAvg"),
+    eSignCostPerSignature: $("eSignCostPerSignature"),
+    manualCostPerSignature: $("manualCostPerSignature"),
+
+    useDefaults: $("useDefaults"),
+    minCurrentTotal: $("minCurrentTotal"),
+    minFutureTotal: $("minFutureTotal"),
+    minExtraSignerCurrent: $("minExtraSignerCurrent"),
+    minExtraSignerFuture: $("minExtraSignerFuture"),
+
+    hourlyRate: $("hourlyRate"),
+    hoursPerFTE: $("hoursPerFTE"),
+    includeCitizenTime: $("includeCitizenTime"),
+    citizenWrap: $("citizenWrap"),
+    minCitizenSaved: $("minCitizenSaved"),
+    citizenShare: $("citizenShare"),
+
+    oneOffCost: $("oneOffCost"),
+    annualCost: $("annualCost"),
+    years: $("years"),
+    discountRate: $("discountRate"),
+  };
+
+  const defaults = {
+    docsPerYear: 2500,
+    signersAvg: 1,
+    eSignCostPerSignature: 65,
+    manualCostPerSignature: 0,
+
+    useDefaults: true,
+    minCurrentTotal: 18,
+    minFutureTotal: 6,
+    minExtraSignerCurrent: 4,
+    minExtraSignerFuture: 1,
+
+    hourlyRate: 650,
+    hoursPerFTE: 1750,
+    includeCitizenTime: false,
+    minCitizenSaved: 5,
+    citizenShare: 50,
+
+    oneOffCost: 250000,
+    annualCost: 50000,
+    years: 3,
+    discountRate: 4.0
+  };
+
+  function clamp(n, a, b) {
+    n = Number.isFinite(n) ? n : a;
+    return Math.max(a, Math.min(b, n));
+  }
+
+  function num(v) {
+    const x = Number(String(v ?? "").replace(",", "."));
+    return Number.isFinite(x) ? x : 0;
+  }
+
+  function fmtInt(n) { return Math.round(n).toLocaleString("nb-NO"); }
+  function fmtKr(n) { return Math.round(n).toLocaleString("nb-NO") + " kr"; }
+  function fmtHr(n) { return (Math.round(n * 10) / 10).toLocaleString("nb-NO") + " t"; }
+
+  function pvFactor(rate, years) {
+    const r = rate / 100;
+    let s = 0;
+    for (let t = 1; t <= years; t++) s += 1 / Math.pow(1 + r, t);
+    return s;
+  }
+
+  function readState() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch {}
+    return { ...defaults, ...saved };
+  }
+
+  function writeState(state) {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  }
+
+  function loadToUI(state) {
+    inputs.docsPerYear.value = state.docsPerYear;
+    inputs.signersAvg.value = String(state.signersAvg);
+    inputs.eSignCostPerSignature.value = state.eSignCostPerSignature;
+    inputs.manualCostPerSignature.value = state.manualCostPerSignature;
+
+    inputs.useDefaults.checked = !!state.useDefaults;
+    inputs.minCurrentTotal.value = state.minCurrentTotal;
+    inputs.minFutureTotal.value = state.minFutureTotal;
+    inputs.minExtraSignerCurrent.value = state.minExtraSignerCurrent;
+    inputs.minExtraSignerFuture.value = state.minExtraSignerFuture;
+
+    inputs.hourlyRate.value = state.hourlyRate;
+    inputs.hoursPerFTE.value = state.hoursPerFTE;
+
+    inputs.includeCitizenTime.checked = !!state.includeCitizenTime;
+    inputs.minCitizenSaved.value = state.minCitizenSaved;
+    inputs.citizenShare.value = state.citizenShare;
+    inputs.citizenWrap.classList.toggle("hide", !state.includeCitizenTime);
+
+    inputs.oneOffCost.value = state.oneOffCost;
+    inputs.annualCost.value = state.annualCost;
+    inputs.years.value = state.years;
+    inputs.discountRate.value = state.discountRate;
+
+    toggleDefaultsUI(state.useDefaults);
+  }
+
+  function uiToState() {
+    return {
+      docsPerYear: Math.max(0, Math.round(num(inputs.docsPerYear.value))),
+      signersAvg: clamp(Math.round(num(inputs.signersAvg.value)), 1, 3),
+      eSignCostPerSignature: Math.max(0, num(inputs.eSignCostPerSignature.value)),
+      manualCostPerSignature: Math.max(0, num(inputs.manualCostPerSignature.value)),
+
+      useDefaults: !!inputs.useDefaults.checked,
+      minCurrentTotal: Math.max(0, num(inputs.minCurrentTotal.value)),
+      minFutureTotal: Math.max(0, num(inputs.minFutureTotal.value)),
+      minExtraSignerCurrent: Math.max(0, num(inputs.minExtraSignerCurrent.value)),
+      minExtraSignerFuture: Math.max(0, num(inputs.minExtraSignerFuture.value)),
+
+      hourlyRate: Math.max(0, num(inputs.hourlyRate.value)),
+      hoursPerFTE: Math.max(1, num(inputs.hoursPerFTE.value)),
+
+      includeCitizenTime: !!inputs.includeCitizenTime.checked,
+      minCitizenSaved: Math.max(0, num(inputs.minCitizenSaved.value)),
+      citizenShare: clamp(num(inputs.citizenShare.value), 0, 100),
+
+      oneOffCost: Math.max(0, num(inputs.oneOffCost.value)),
+      annualCost: Math.max(0, num(inputs.annualCost.value)),
+      years: Math.max(1, Math.round(num(inputs.years.value))),
+      discountRate: Math.max(0, num(inputs.discountRate.value)),
+    };
+  }
+
+  function toggleDefaultsUI(useDefaults) {
+    ["minCurrentTotal","minFutureTotal","minExtraSignerCurrent","minExtraSignerFuture"].forEach(id => {
+      $(id).disabled = !!useDefaults;
+    });
+  }
+
+  function applyDefaultsIfNeeded(state) {
+    if (!state.useDefaults) return state;
+    return {
+      ...state,
+      minCurrentTotal: defaults.minCurrentTotal,
+      minFutureTotal: defaults.minFutureTotal,
+      minExtraSignerCurrent: defaults.minExtraSignerCurrent,
+      minExtraSignerFuture: defaults.minExtraSignerFuture
+    };
+  }
+
+  function compute(stateRaw) {
+    const state = applyDefaultsIfNeeded(stateRaw);
+
+    const docs = state.docsPerYear;
+    const signers = state.signersAvg; // 1..3 (3 = 3+ i UI)
+    const extraSigners = Math.max(0, signers - 1);
+
+    const minCur = state.minCurrentTotal + extraSigners * state.minExtraSignerCurrent;
+    const minFut = state.minFutureTotal + extraSigners * state.minExtraSignerFuture;
+
+    const minutesSavedPerDoc = Math.max(0, minCur - minFut);
+    const hoursSavedInternal = (docs * minutesSavedPerDoc) / 60;
+
+    const fteSaved = hoursSavedInternal / state.hoursPerFTE;
+    const internalKrSaved = hoursSavedInternal * state.hourlyRate;
+
+    const signaturesPerYear = docs * signers;
+
+    const annualManualSignatureCost = signaturesPerYear * state.manualCostPerSignature;
+    const annualESignatureCost = signaturesPerYear * state.eSignCostPerSignature;
+
+    // Positive = eSign is more expensive than manual on pure unit cost
+    const annualSignatureDelta = annualESignatureCost - annualManualSignatureCost;
+
+    // Benefit: time savings in kr minus any signature cost increase
+    const annualBenefit = internalKrSaved - annualSignatureDelta;
+
+    const pvAnn = pvFactor(state.discountRate, state.years);
+    const annualNet = annualBenefit - state.annualCost;
+    const npv = (-state.oneOffCost) + annualNet * pvAnn;
+
+    const citizenHoursSaved = state.includeCitizenTime
+      ? (docs * (state.citizenShare / 100) * state.minCitizenSaved) / 60
+      : 0;
+
+    return {
+      docs, signers, signaturesPerYear,
+      minCur, minFut,
+      minutesSavedPerDoc,
+      hoursSavedInternal,
+      fteSaved,
+      internalKrSaved,
+      annualManualSignatureCost,
+      annualESignatureCost,
+      annualSignatureDelta,
+      annualBenefit,
+      annualNet,
+      npv,
+      citizenHoursSaved
+    };
+  }
+
+  function renderSideKPIs(calc, state) {
+    const side = $("sideKpis");
+    side.innerHTML = "";
+
+    const items = [
+      { t: "Timer spart per år (internt)", v: fmtHr(calc.hoursSavedInternal) },
+      { t: "Årsverk spart per år", v: (Math.round(calc.fteSaved * 100) / 100).toLocaleString("nb-NO") },
+      { t: "Årlig kostnad eSignering", v: fmtKr(calc.annualESignatureCost) },
+      { t: "Årlig kostnad manuell signering", v: fmtKr(calc.annualManualSignatureCost) },
+      { t: "Brutto (tidsgevinst − merkost signatur)", v: fmtKr(calc.annualBenefit) },
+    ];
+
+    if (state.includeCitizenTime) {
+      items.push({ t: "Timer spart for brukere per år", v: fmtHr(calc.citizenHoursSaved) });
+    }
+
+    items.forEach(x => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `<div class="t">${x.t}</div><div class="v">${x.v}</div>`;
+      side.appendChild(div);
+    });
+  }
+
+  function renderFinal(calc, state) {
+    const kpis = $("kpis");
+    kpis.innerHTML = "";
+
+    const items = [
+      { t: "Timer spart per år (internt)", v: fmtHr(calc.hoursSavedInternal) },
+      { t: "Årsverk spart per år", v: (Math.round(calc.fteSaved * 100) / 100).toLocaleString("nb-NO") },
+      { t: "Årlig merkost signatur (eSign − manuell)", v: fmtKr(calc.annualSignatureDelta) },
+      { t: "Brutto (tidsgevinst − merkost signatur)", v: fmtKr(calc.annualBenefit) },
+      { t: "Årlig netto etter drift (kr)", v: fmtKr(calc.annualNet) },
+      { t: `Nettonåverdi (NPV) over ${state.years} år`, v: fmtKr(calc.npv) },
+    ];
+
+    if (state.includeCitizenTime) {
+      items.splice(2, 0, { t: "Timer spart for brukere per år", v: fmtHr(calc.citizenHoursSaved) });
+    }
+
+    items.forEach(x => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `<div class="t">${x.t}</div><div class="v">${x.v}</div>`;
+      kpis.appendChild(div);
+    });
+
+    const rows = [
+      ["Dokument per år", fmtInt(state.docsPerYear)],
+      ["Gj.sn. signatarer per dokument", state.signersAvg === 3 ? "3+" : String(state.signersAvg)],
+      ["Signaturer per år (docs × signatarer)", fmtInt(calc.signaturesPerYear)],
+      ["Kostnad per elektronisk signatur", fmtKr(state.eSignCostPerSignature)],
+      ["Kostnad per manuell signatur", fmtKr(state.manualCostPerSignature)],
+
+      ["Dagens minutter per dokument (inkl signatarer)", fmtInt(calc.minCur)],
+      ["Med eSignering: minutter per dokument (inkl signatarer)", fmtInt(calc.minFut)],
+      ["Minutter spart per dokument", fmtInt(calc.minutesSavedPerDoc)],
+
+      ["Timekost", fmtKr(state.hourlyRate) + " / time"],
+      ["Timer per årsverk", fmtInt(state.hoursPerFTE)],
+
+      ["Årlig kostnad eSignering", fmtKr(calc.annualESignatureCost)],
+      ["Årlig kostnad manuell signering", fmtKr(calc.annualManualSignatureCost)],
+      ["Årlig merkost signatur (eSign − manuell)", fmtKr(calc.annualSignatureDelta)],
+
+      ["Engangskostnad", fmtKr(state.oneOffCost)],
+      ["Årlig drift/forvaltning", fmtKr(state.annualCost)],
+      ["Analysehorisont", fmtInt(state.years) + " år"],
+      ["Diskonteringsrente", state.discountRate.toLocaleString("nb-NO") + " %"],
+    ];
+
+    if (state.includeCitizenTime) {
+      rows.push(["(Valgfritt) Minutter spart per bruker-oppdrag", fmtInt(state.minCitizenSaved)]);
+      rows.push(["(Valgfritt) Andel bruker-oppdrag", state.citizenShare.toLocaleString("nb-NO") + " %"]);
+    }
+
+    const table = $("summaryTable");
+    table.innerHTML = "";
+    rows.forEach(([k, v]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${k}</td><td><strong>${v}</strong></td>`;
+      table.appendChild(tr);
+    });
+
+    $("exportBox").classList.add("hide");
+  }
+
+  let step = 1;
+
+  function renderStepHeader() {
+    $("stepTitle").textContent = steps[step - 1].title;
+    $("stepHint").textContent = steps[step - 1].hint;
+
+    const chips = $("stepChips");
+    chips.innerHTML = "";
+    steps.forEach(s => {
+      const div = document.createElement("div");
+      div.className = "chip" + (s.n === step ? " active" : "") + (s.n < step ? " done" : "");
+      div.textContent = String(s.n);
+      div.title = s.title;
+      div.style.cursor = "pointer";
+      div.addEventListener("click", () => { goToStep(s.n, { validate: false }); });
+      chips.appendChild(div);
+    });
+
+    $("btnPrev").disabled = step === 1;
+    $("btnNext").textContent = step === 5 ? "Ferdig" : "Neste";
+  }
+
+  function showStep(n) {
+    document.querySelectorAll(".step").forEach(el => {
+      el.classList.toggle("hide", Number(el.dataset.step) !== n);
+    });
+  }
+
+  function setError(msg) {
+    const box = $("errorBox");
+    if (!msg) { box.classList.add("hide"); box.textContent = ""; return; }
+    box.textContent = msg;
+    box.classList.remove("hide");
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function validateStep(n, state) {
+    if (n === 1) {
+      if (state.docsPerYear <= 0) return "Antall dokument per år må være større enn 0.";
+      if (state.eSignCostPerSignature < 0 || state.manualCostPerSignature < 0) return "Kostnader kan ikke være negative.";
+    }
+    if (n === 2) {
+      if (!state.useDefaults) {
+        if (state.minCurrentTotal < 0 || state.minFutureTotal < 0) return "Minutter kan ikke være negative.";
+        if (state.minExtraSignerCurrent < 0 || state.minExtraSignerFuture < 0) return "Minutter kan ikke være negative.";
+      }
+      if (!state.useDefaults && state.minFutureTotal > state.minCurrentTotal) {
+        return "Sjekk tidsanslag: eSignering er satt til mer tid enn dagens prosess. Det kan være riktig, men er uvanlig.";
+      }
+    }
+    if (n === 3) {
+      if (state.hourlyRate < 0) return "Timekost kan ikke være negativt.";
+      if (state.hoursPerFTE <= 0) return "Timer per årsverk må være større enn 0.";
+      if (state.includeCitizenTime) {
+        if (state.citizenShare < 0 || state.citizenShare > 100) return "Andel bruker-oppdrag må være mellom 0 og 100.";
+      }
+    }
+    if (n === 4) {
+      if (state.years < 1) return "Analysehorisont må være minst 1 år.";
+      if (state.discountRate < 0) return "Diskonteringsrente kan ikke være negativ.";
+    }
+    return "";
+  }
+
+  function goToStep(n, { validate = true } = {}) {
+    const state = uiToState();
+    if (validate) {
+      const msg = validateStep(step, state);
+      if (msg) { setError(msg); return; }
+    }
+    setError("");
+    step = clamp(n, 1, 5);
+    renderStepHeader();
+    showStep(step);
+
+    const state2 = applyDefaultsIfNeeded(state);
+    const calc = compute(state2);
+    renderSideKPIs(calc, state2);
+    if (step === 5) renderFinal(calc, state2);
+
+    writeState(state2);
+  }
+
+  function onAnyChange() {
+    const state = uiToState();
+    inputs.citizenWrap.classList.toggle("hide", !state.includeCitizenTime);
+    toggleDefaultsUI(state.useDefaults);
+
+    const state2 = applyDefaultsIfNeeded(state);
+    writeState(state2);
+
+    const calc = compute(state2);
+    renderSideKPIs(calc, state2);
+    if (step === 5) renderFinal(calc, state2);
+  }
+
+  document.querySelectorAll("input, select").forEach(el => {
+    el.addEventListener("input", onAnyChange);
+    el.addEventListener("change", onAnyChange);
+  });
+
+  $("btnPrev").addEventListener("click", () => goToStep(step - 1));
+  $("btnNext").addEventListener("click", () => {
+    if (step === 5) return;
+    goToStep(step + 1, { validate: true });
+  });
+
+  $("btnPrint").addEventListener("click", () => window.print());
+
+  $("btnReset").addEventListener("click", () => {
+    localStorage.removeItem(LS_KEY);
+    const state = { ...defaults };
+    loadToUI(state);
+    setError("");
+    step = 1;
+    renderStepHeader();
+    showStep(step);
+    const calc = compute(state);
+    renderSideKPIs(calc, state);
+  });
+
+  $("btnExport").addEventListener("click", () => {
+    const state = uiToState();
+    const state2 = applyDefaultsIfNeeded(state);
+    const calc = compute(state2);
+
+    const payload = {
+      meta: { app: "esignering_gains_proto", version: 2, exportedAt: new Date().toISOString() },
+      inputs: state2,
+      results: {
+        hoursSavedInternal: calc.hoursSavedInternal,
+        fteSaved: calc.fteSaved,
+        internalKrSaved: calc.internalKrSaved,
+        annualManualSignatureCost: calc.annualManualSignatureCost,
+        annualESignatureCost: calc.annualESignatureCost,
+        annualSignatureDelta: calc.annualSignatureDelta,
+        annualBenefit: calc.annualBenefit,
+        annualNet: calc.annualNet,
+        npv: calc.npv,
+        citizenHoursSaved: calc.citizenHoursSaved
+      }
+    };
+
+    const box = $("exportBox");
+    box.textContent = JSON.stringify(payload, null, 2);
+    box.classList.remove("hide");
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  const state0 = readState();
+  loadToUI(state0);
+  renderStepHeader();
+  showStep(step);
+  const calc0 = compute(state0);
+  renderSideKPIs(calc0, state0);
+})();
+</script>
+</body>
+</html>
