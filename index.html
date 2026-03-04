@@ -14,6 +14,7 @@
     @media (max-width: 900px) { main { grid-template-columns: 1fr; } header { position: static; } }
 
     .card { background:#fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: 0 1px 0 rgba(0,0,0,0.04); }
+    .card svg { overflow:hidden; }
     .card h2 { margin: 0 0 10px; font-size: 16px; }
     .muted { color:#555; font-size: 13px; }
     .small { font-size: 12px; color:#666; }
@@ -212,13 +213,13 @@
 
           <div class="grid2">
             <label>
-              Kontrafaktisk årlig kostnad (kr)
+              Årlig kostnad uten eSignering (kr)
               <input type="number" min="0" step="1000" id="contraAnnualCost" />
               <div class="small">Totalkostnad dersom man hadde fortsatt med gammel prosess (f.eks. 61 267 486 kr).</div>
             </label>
 
             <label>
-              Faktisk årlig kostnad (kr)
+              Årlig kostnad med eSignering (kr)
               <input type="number" min="0" step="1000" id="factualAnnualCost" />
               <div class="small">Virkelige kostnader ved eSignering (f.eks. 31 615 253 kr).</div>
             </label>
@@ -275,20 +276,20 @@
     <!-- time gains chart -->
     <div class="card" style="margin-top:10px;">
       <h3 style="margin:0 0 8px 0; font-size:14px;">Timer spart i løpet av et år</h3>
-      <svg id="timeChart" width="100%" height="140"></svg>
+      <svg id="timeChart" width="100%" height="360" style="overflow:hidden"></svg>
       <div class="small" style="margin-top:6px;">Viser antall timer spart per år; omregnes til kr med timekost ved behov.</div>
     </div>
     <!-- scenario comparison chart -->
     <div class="card" style="margin-top:10px;">
       <h3 style="margin:0 0 8px 0; font-size:14px;">Kostnadsoversikt (årlig)</h3>
-      <svg id="costChart" width="100%" height="140"></svg>
-      <div class="small" style="margin-top:6px;">Sammenligner kontrafaktisk vs faktisk kostnad og viser unngått kostnad (gevinst).</div>
+      <svg id="costChart" width="100%" height="360" style="overflow:hidden"></svg>
+      <div class="small" style="margin-top:6px;">Sammenligner årlig kostnad uten eSignering vs med eSignering og viser unngått beløp (gevinst).</div>
     </div>
 
     <div class="warn">
       <div><strong>Tips til utfylling</strong></div>
       <div class="small" style="margin-top:6px;">
-        Start med volum og kostnadsfelt. Hvis du har scenariodata (kontrafaktisk/faktisk), fylles disse inn sist.
+        Start med volum og kostnadsfelt. Hvis du har scenariodata (uten eSignering/med eSignering), fylles disse inn sist.
       </div>
     </div>
   </aside>
@@ -328,6 +329,21 @@
     discountRate: $("discountRate"),
   };
 
+  // add italic grey placeholder styling
+  const style = document.createElement('style');
+  style.textContent = 'input::placeholder { font-style: italic; color: #999; }';
+  document.head.appendChild(style);
+
+  // helper to assign placeholders equal to defaults
+  function setPlaceholders() {
+    Object.keys(inputs).forEach(key => {
+      const el = inputs[key];
+      if (el && el.tagName === 'INPUT' && el.type === 'number') {
+        el.placeholder = defaults[key] != null ? String(defaults[key]) : '';
+      }
+    });
+  }
+
   const defaults = {
     docsPerYear: 2500,
     signersAvg: 1,
@@ -349,9 +365,8 @@
 
     oneOffCost: 250000,
     annualCost: 50000,
-    // sample scenario costs so that charts are visible by default
-    contraAnnualCost: 61267486,
-    factualAnnualCost: 31615253,
+    contraAnnualCost: 0,
+    factualAnnualCost: 0,
     years: 3,
     discountRate: 4.0
   };
@@ -378,73 +393,82 @@
   }
 
   function readState() {
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch {}
-    return { ...defaults, ...saved };
+    // return any previously saved values only (do not merge with defaults)
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; }
   }
 
   function writeState(state) {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    // only persist values that differ from defaults (keeps storage clean,
+    // so placeholders remain on fresh load until user changes something)
+    const toSave = {};
+    Object.keys(state).forEach(k => {
+      if (state[k] !== defaults[k]) {
+        toSave[k] = state[k];
+      }
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify(toSave));
   }
 
-  function loadToUI(state) {
-    inputs.docsPerYear.value = state.docsPerYear;
-    inputs.signersAvg.value = String(state.signersAvg);
-    inputs.eSignCostPerSignature.value = state.eSignCostPerSignature;
-    inputs.manualCostPerSignature.value = state.manualCostPerSignature;
-    inputs.netGainPerSignature.value = state.netGainPerSignature;
+  function loadToUI(saved) {
+    // set placeholders first
+    setPlaceholders();
 
-    inputs.useDefaults.checked = !!state.useDefaults;
-    inputs.minCurrentTotal.value = state.minCurrentTotal;
-    inputs.minFutureTotal.value = state.minFutureTotal;
-    inputs.minExtraSignerCurrent.value = state.minExtraSignerCurrent;
-    inputs.minExtraSignerFuture.value = state.minExtraSignerFuture;
+    // for each input, if the saved object has a value, populate it;
+    // otherwise leave it blank so the placeholder shows
+    Object.keys(inputs).forEach(key => {
+      const el = inputs[key];
+      if (!el) return;
+      if (el.tagName === 'INPUT' && el.type === 'number') {
+        if (saved[key] != null && saved[key] !== "") el.value = saved[key];
+        else el.value = "";
+      } else if (el.tagName === 'SELECT') {
+        if (saved[key] != null) el.value = String(saved[key]);
+      } else if (el.type === 'checkbox') {
+        el.checked = !!saved[key];
+      }
+    });
 
-    inputs.hourlyRate.value = state.hourlyRate;
-    inputs.hoursPerFTE.value = state.hoursPerFTE;
-
-    inputs.includeCitizenTime.checked = !!state.includeCitizenTime;
-    inputs.minCitizenSaved.value = state.minCitizenSaved;
-    inputs.citizenShare.value = state.citizenShare;
-    inputs.citizenWrap.classList.toggle("hide", !state.includeCitizenTime);
-
-    inputs.oneOffCost.value = state.oneOffCost;
-    inputs.annualCost.value = state.annualCost;
-    inputs.contraAnnualCost.value = state.contraAnnualCost;
-    inputs.factualAnnualCost.value = state.factualAnnualCost;
-    inputs.years.value = state.years;
-    inputs.discountRate.value = state.discountRate;
-
-    toggleDefaultsUI(state.useDefaults);
+    // ensure citizenWrap visibility and defaults toggle
+    const stateMaybe = { ...defaults, ...saved };
+    inputs.citizenWrap.classList.toggle("hide", !stateMaybe.includeCitizenTime);
+    toggleDefaultsUI(stateMaybe.useDefaults);
   }
+
 
   function uiToState() {
+    // helper to read a numeric field or fall back to defaults when empty
+    const readNum = (id) => {
+      const v = inputs[id].value;
+      if (v === "" || v == null) return defaults[id];
+      return num(v);
+    };
+
     return {
-      docsPerYear: Math.max(0, Math.round(num(inputs.docsPerYear.value))),
-      signersAvg: clamp(Math.round(num(inputs.signersAvg.value)), 1, 3),
-      eSignCostPerSignature: Math.max(0, num(inputs.eSignCostPerSignature.value)),
-      manualCostPerSignature: Math.max(0, num(inputs.manualCostPerSignature.value)),
-      netGainPerSignature: Math.max(0, num(inputs.netGainPerSignature.value)),
+      docsPerYear: Math.max(0, Math.round(readNum('docsPerYear'))),
+      signersAvg: clamp(Math.round(readNum('signersAvg')), 1, 3),
+      eSignCostPerSignature: Math.max(0, readNum('eSignCostPerSignature')),
+      manualCostPerSignature: Math.max(0, readNum('manualCostPerSignature')),
+      netGainPerSignature: Math.max(0, readNum('netGainPerSignature')),
 
       useDefaults: !!inputs.useDefaults.checked,
-      minCurrentTotal: Math.max(0, num(inputs.minCurrentTotal.value)),
-      minFutureTotal: Math.max(0, num(inputs.minFutureTotal.value)),
-      minExtraSignerCurrent: Math.max(0, num(inputs.minExtraSignerCurrent.value)),
-      minExtraSignerFuture: Math.max(0, num(inputs.minExtraSignerFuture.value)),
+      minCurrentTotal: Math.max(0, readNum('minCurrentTotal')),
+      minFutureTotal: Math.max(0, readNum('minFutureTotal')),
+      minExtraSignerCurrent: Math.max(0, readNum('minExtraSignerCurrent')),
+      minExtraSignerFuture: Math.max(0, readNum('minExtraSignerFuture')),
 
-      hourlyRate: Math.max(0, num(inputs.hourlyRate.value)),
-      hoursPerFTE: Math.max(1, num(inputs.hoursPerFTE.value)),
+      hourlyRate: Math.max(0, readNum('hourlyRate')),
+      hoursPerFTE: Math.max(1, readNum('hoursPerFTE')),
 
       includeCitizenTime: !!inputs.includeCitizenTime.checked,
-      minCitizenSaved: Math.max(0, num(inputs.minCitizenSaved.value)),
-      citizenShare: clamp(num(inputs.citizenShare.value), 0, 100),
+      minCitizenSaved: Math.max(0, readNum('minCitizenSaved')),
+      citizenShare: clamp(readNum('citizenShare'), 0, 100),
 
-      oneOffCost: Math.max(0, num(inputs.oneOffCost.value)),
-      annualCost: Math.max(0, num(inputs.annualCost.value)),
-      contraAnnualCost: Math.max(0, num(inputs.contraAnnualCost.value)),
-      factualAnnualCost: Math.max(0, num(inputs.factualAnnualCost.value)),
-      years: Math.max(1, Math.round(num(inputs.years.value))),
-      discountRate: Math.max(0, num(inputs.discountRate.value)),
+      oneOffCost: Math.max(0, readNum('oneOffCost')),
+      annualCost: Math.max(0, readNum('annualCost')),
+      contraAnnualCost: Math.max(0, readNum('contraAnnualCost')),
+      factualAnnualCost: Math.max(0, readNum('factualAnnualCost')),
+      years: Math.max(1, Math.round(readNum('years'))),
+      discountRate: Math.max(0, readNum('discountRate')),
     };
   }
 
@@ -604,8 +628,8 @@
 
       ["Engangskostnad", fmtKr(state.oneOffCost)],
       ["Årlig drift/forvaltning", fmtKr(state.annualCost)],
-      ["Kontrafaktisk årlig kostnad", fmtKr(state.contraAnnualCost)],
-      ["Faktisk årlig kostnad", fmtKr(state.factualAnnualCost)],
+      ["Årlig kostnad uten eSignering", fmtKr(state.contraAnnualCost)],
+      ["Årlig kostnad med eSignering", fmtKr(state.factualAnnualCost)],
       ["Analysehorisont", fmtInt(state.years) + " år"],
       ["Diskonteringsrente", state.discountRate.toLocaleString("nb-NO") + " %"],
     ];
@@ -629,10 +653,10 @@
   function renderTimeChart(calc, state) {
     const svg = $("timeChart");
     const w = svg.clientWidth || 300;
-    const h = svg.clientHeight || 140;
-    const pad = 40;
+    const h = svg.clientHeight || 360;
+    const pad = 60;
     const chartW = w - pad * 2;
-    const chartH = h - pad - 20;
+    const chartH = h - pad - 50;
 
     // if scenario costs exist, show hours comparison
     if (state.contraAnnualCost || state.factualAnnualCost) {
@@ -656,12 +680,12 @@
         <line x1="${pad}" y1="${pad + chartH}" x2="${w - pad}" y2="${pad + chartH}" stroke="#ccc" stroke-width="1" />
         <rect x="${x1 - barW/2}" y="${y1}" width="${barW}" height="${h1}" fill="#c44" rx="2" />
         <rect x="${x2 - barW/2}" y="${y2}" width="${barW}" height="${h2}" fill="#44c" rx="2" />
-        <text x="${x1}" y="${h - 12}" text-anchor="middle" font-size="11" fill="#666">
-            <tspan x="${x1}" dy="0">Kontrafaktisk</tspan>
-            <tspan x="${x1}" dy="1.2em">saksbehandling</tspan>
+        <text x="${x1}" y="${pad + chartH + 25}" text-anchor="middle" font-size="9" fill="#666">
+            <tspan x="${x1}" dy="0">Uten</tspan>
+            <tspan x="${x1}" dy="1.2em">eSignering</tspan>
         </text>
-        <text x="${x2}" y="${h - 12}" text-anchor="middle" font-size="11" fill="#666">
-            <tspan x="${x2}" dy="0">Gevinst fra</tspan>
+        <text x="${x2}" y="${pad + chartH + 25}" text-anchor="middle" font-size="9" fill="#666">
+            <tspan x="${x2}" dy="0">Gevinst med</tspan>
             <tspan x="${x2}" dy="1.2em">eSignering</tspan>
         </text>
         <text x="${x1}" y="${y1 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtHr(contraHours)}</text>
@@ -715,10 +739,10 @@
   function renderChart(state) {
     const svg = $("costChart");
     const w = svg.clientWidth || 300;
-    const h = svg.clientHeight || 140;
-    const pad = 40;
+    const h = svg.clientHeight || 360;
+    const pad = 60;
     const chartW = w - pad * 2;
-    const chartH = h - pad - 20;
+    const chartH = h - pad - 50;
 
     // if scenario costs provided, show bar chart
     if (state.contraAnnualCost || state.factualAnnualCost) {
@@ -751,8 +775,14 @@
         <rect x="${x2 - barW/2}" y="${y2}" width="${barW}" height="${h2}" fill="#44c" rx="2" />
         
         <!-- labels -->
-        <text x="${x1}" y="${h - 5}" text-anchor="middle" font-size="11" fill="#666">Kontrafaktisk</text>
-        <text x="${x2}" y="${h - 5}" text-anchor="middle" font-size="11" fill="#666">Gevinst</text>
+        <text x="${x1}" y="${pad + chartH + 25}" text-anchor="middle" font-size="9" fill="#666">
+            <tspan x="${x1}" dy="0">Uten</tspan>
+            <tspan x="${x1}" dy="1.2em">eSignering</tspan>
+        </text>
+        <text x="${x2}" y="${pad + chartH + 25}" text-anchor="middle" font-size="9" fill="#666">
+            <tspan x="${x2}" dy="0">Gevinst med</tspan>
+            <tspan x="${x2}" dy="1.2em">eSignering</tspan>
+        </text>
         
         <!-- values on bars -->
         <text x="${x1}" y="${y1 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtInt(contra)}</text>
@@ -762,7 +792,7 @@
     }
 
     // fallback: simple message when no scenario data
-    svg.innerHTML = `<text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="13" fill="#999">Fyll inn kontrafaktisk og faktisk årlig kostnad for å se kostnadssammenlikning</text>`;
+    svg.innerHTML = `<text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="13" fill="#999">Fyll inn årlig kostnad uten eSignering og med eSignering for å se kostnadssammenlikning</text>`;
   }
 
   function updateDisplay() {
@@ -822,8 +852,9 @@
     box.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  const state0 = readState();
-  loadToUI(state0);
+  const saved = readState();
+  const state0 = { ...defaults, ...saved };
+  loadToUI(saved);
   updateDisplay();
 })();
 </script>
