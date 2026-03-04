@@ -57,21 +57,18 @@
 <body>
 <header>
   <h1>eSignering – gevinstkalkulator (HTML-prototype)</h1>
-  <p class="muted">Estimerer tidsgevinster og nettoeffekt ved overgang til eSignering.</p>
-  <div class="steps" id="stepChips"></div>
+  <p class="muted">Estimerer tidsgevinster og nettoeffekt ved overgang til eSignering. Alle felter oppdaterer resultatene live.</p>
 </header>
 
 <main>
   <section class="card">
-    <h2 id="stepTitle">Steg</h2>
-    <div class="muted" id="stepHint"></div>
-
     <div id="errorBox" class="warn hide" role="alert" aria-live="polite" style="border-left-color:#c77;background:#fff7f7;border-color:#f0caca;"></div>
 
     <div id="stepsWrap">
 
-      <!-- Step 1 -->
-      <div class="step" data-step="1">
+      <!-- Section 1: Volume & Costs -->
+      <div class="card" style="margin-bottom: 16px;">
+        <h2>Volum og enhetskost</h2>
         <form id="form1">
           <div class="grid2">
             <label>
@@ -94,8 +91,8 @@
           <div class="grid2">
             <label>
               Kostnad per elektronisk signatur (kr)
-              <input type="number" min="0" step="1" id="eSignCostPerSignature" />
-              <div class="small">Default: 65 kr per signatur.</div>
+              <input type="number" min="0" step="0.01" id="eSignCostPerSignature" />
+              <div class="small">Hardkost per signatur (~4,41 kr i 2025). Brutto‑gevinst (65 kr) fylles i eget felt.</div>
             </label>
 
             <label>
@@ -104,11 +101,20 @@
               <div class="small">Sett 0 hvis du kun vil regne eSign-kost som merkost.</div>
             </label>
           </div>
+
+          <div class="grid2">
+            <label>
+              Gevinst per signatur (kr)
+              <input type="number" min="0" step="1" id="netGainPerSignature" />
+              <div class="small">Skriv 65 for estimat fra konsulent (netto gevinst per signatur). Sett 0 for å bruke vanlig tidsmodell basert på tid og kostnad.</div>
+            </label>
+          </div>
         </form>
       </div>
 
-      <!-- Step 2 -->
-      <div class="step hide" data-step="2">
+      <!-- Section 2: Time assumptions -->
+      <div class="card" style="margin-bottom: 16px;">
+        <h2>Tidsbruk (i dag vs eSignering)</h2>
         <form id="form2">
           <div class="row">
             <label class="row" style="gap:8px;">
@@ -148,17 +154,15 @@
         </form>
       </div>
 
-      <!-- Step 3 -->
-      <div class="step hide" data-step="3">
+      <!-- Section 3: Labor rates -->
+      <div class="card" style="margin-bottom: 16px;">
+        <h2>Omregning til kr og årsverk</h2>
         <form id="form3">
           <div class="grid2">
             <label>
               Timekost (kr per time)
               <input type="number" min="0" step="10" id="hourlyRate" />
-              <div class="small">For omregning til kr: bruk intern kalkyle (f.eks. 650).</div>
-            </label>
-
-            <label>
+              <div class="small">Basert på brutto årslønn ~732 428 kr gir ca. 420 kr/t ved 1 750 timer.</div>
               Timer per årsverk
               <input type="number" min="1" step="1" id="hoursPerFTE" />
               <div class="small">Default: 1 750 timer per årsverk.</div>
@@ -187,20 +191,36 @@
         </form>
       </div>
 
-      <!-- Step 4 -->
-      <div class="step hide" data-step="4">
+      <!-- Section 4: Costs and horizon -->
+      <div class="card" style="margin-bottom: 16px;">
+        <h2>Kostnader og analysehorisont</h2>
+        <p class="small">Angi engangskostnad (integrasjon, prosjekt, opplæring) og årlige kostnader dersom dere ønsker å ta det med i nettoanalysen. Sett 0 hvis dere bare bruker per-signatur‑gevinst.</p>
         <form id="form4">
           <div class="grid2">
             <label>
               Engangskostnad (kr)
               <input type="number" min="0" step="1000" id="oneOffCost" />
-              <div class="small">Integrasjon/prosjekt/opplæring.</div>
+              <div class="small">Integrasjon/prosjekt/opplæring. Sett 0 hvis ingen engangskostnader.</div>
             </label>
 
             <label>
               Årlig drifts-/forvaltningskostnad (kr per år)
               <input type="number" min="0" step="1000" id="annualCost" />
-              <div class="small">Abonnement, lisens, intern forvaltning.</div>
+              <div class="small">Abonnement, lisens, intern forvaltning. Sett 0 hvis du ikke tar disse med.</div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Kontrafaktisk årlig kostnad (kr)
+              <input type="number" min="0" step="1000" id="contraAnnualCost" />
+              <div class="small">Totalkostnad dersom man hadde fortsatt med gammel prosess (f.eks. 61 267 486 kr).</div>
+            </label>
+
+            <label>
+              Faktisk årlig kostnad (kr)
+              <input type="number" min="0" step="1000" id="factualAnnualCost" />
+              <div class="small">Virkelige kostnader ved eSignering (f.eks. 31 615 253 kr).</div>
             </label>
           </div>
 
@@ -220,12 +240,13 @@
         </form>
       </div>
 
-      <!-- Step 5 -->
-      <div class="step hide" data-step="5">
+      <!-- Section 5: Summary & Results -->
+      <div class="card" style="margin-bottom: 16px;">
+        <h2>Oppsummering og resultat</h2>
         <div class="kpi" id="kpis"></div>
 
-        <div class="card" style="margin-top: 12px; border-radius: 14px;">
-          <h2 style="margin-top:0;">Oppsummering av input</h2>
+        <div style="margin-top: 12px;">
+          <h3 style="margin-top:0;">Detaljer av input</h3>
           <table id="summaryTable"></table>
 
           <div class="small" style="margin-top:10px;">
@@ -235,31 +256,39 @@
           <div class="btnbar" style="margin-top:12px;">
             <button class="secondary" id="btnPrint" type="button">Skriv ut (PDF via print)</button>
             <button class="ghost" id="btnExport" type="button">Eksporter JSON</button>
-            <button class="ghost" id="btnReset" type="button">Nullstill</button>
+            <button class="ghost" id="btnReset" type="button">Nullstill alle</button>
           </div>
 
           <pre class="mono hide" id="exportBox"></pre>
         </div>
       </div>
     </div>
-
-    <div class="btnbar">
-      <button class="secondary" id="btnPrev" type="button">Tilbake</button>
-      <button id="btnNext" type="button">Neste</button>
-    </div>
   </section>
 
   <aside class="card">
-    <h2>Live-resultat</h2>
-    <div class="muted">Oppdaterer seg mens du fyller inn.</div>
+    <h2>Bottom Line</h2>
+    <div class="muted">Hovedresultat fra kalkulasjonen.</div>
     <div style="height:10px"></div>
     <div class="kpi" id="sideKpis"></div>
 
     <div style="height:14px"></div>
+    <!-- time gains chart -->
+    <div class="card" style="margin-top:10px;">
+      <h3 style="margin:0 0 8px 0; font-size:14px;">Timer spart i løpet av et år</h3>
+      <svg id="timeChart" width="100%" height="140"></svg>
+      <div class="small" style="margin-top:6px;">Viser antall timer spart per år; omregnes til kr med timekost ved behov.</div>
+    </div>
+    <!-- scenario comparison chart -->
+    <div class="card" style="margin-top:10px;">
+      <h3 style="margin:0 0 8px 0; font-size:14px;">Kostnadsoversikt (årlig)</h3>
+      <svg id="costChart" width="100%" height="140"></svg>
+      <div class="small" style="margin-top:6px;">Sammenligner kontrafaktisk vs faktisk kostnad og viser unngått kostnad (gevinst).</div>
+    </div>
+
     <div class="warn">
       <div><strong>Tips til utfylling</strong></div>
       <div class="small" style="margin-top:6px;">
-        Start gjerne med standardverdier. Antakelsene blir vist, og kan justeres etter skjønn.
+        Start med volum og kostnadsfelt. Hvis du har scenariodata (kontrafaktisk/faktisk), fylles disse inn sist.
       </div>
     </div>
   </aside>
@@ -269,14 +298,6 @@
 (function () {
   const LS_KEY = "esignering_gains_proto_v2";
 
-  const steps = [
-    { n: 1, title: "Steg 1: Volum og signaturkost", hint: "Oppgi antall dokument, antall signatarer, og enhetskost per signatur." },
-    { n: 2, title: "Steg 2: Tidsbruk (i dag vs eSignering)", hint: "Bruk standardverdier eller legg inn egne anslag." },
-    { n: 3, title: "Steg 3: Omregning (kr, årsverk) + valgfri bruker-tid", hint: "Timekost og årsverkfaktor gir kr/årsverk-estimat." },
-    { n: 4, title: "Steg 4: Kostnader og horisont", hint: "Enkelt kostnadsbilde for å få en grov nettoeffekt." },
-    { n: 5, title: "Steg 5: Oppsummering", hint: "Se resultat, sjekk input, og eksporter/skriv ut." }
-  ];
-
   const $ = (id) => document.getElementById(id);
 
   const inputs = {
@@ -284,6 +305,7 @@
     signersAvg: $("signersAvg"),
     eSignCostPerSignature: $("eSignCostPerSignature"),
     manualCostPerSignature: $("manualCostPerSignature"),
+    netGainPerSignature: $("netGainPerSignature"),
 
     useDefaults: $("useDefaults"),
     minCurrentTotal: $("minCurrentTotal"),
@@ -300,6 +322,8 @@
 
     oneOffCost: $("oneOffCost"),
     annualCost: $("annualCost"),
+    contraAnnualCost: $("contraAnnualCost"),
+    factualAnnualCost: $("factualAnnualCost"),
     years: $("years"),
     discountRate: $("discountRate"),
   };
@@ -307,8 +331,9 @@
   const defaults = {
     docsPerYear: 2500,
     signersAvg: 1,
-    eSignCostPerSignature: 65,
+    eSignCostPerSignature: 4.41,
     manualCostPerSignature: 0,
+    netGainPerSignature: 65,
 
     useDefaults: true,
     minCurrentTotal: 18,
@@ -324,6 +349,8 @@
 
     oneOffCost: 250000,
     annualCost: 50000,
+    contraAnnualCost: 0,
+    factualAnnualCost: 0,
     years: 3,
     discountRate: 4.0
   };
@@ -364,6 +391,7 @@
     inputs.signersAvg.value = String(state.signersAvg);
     inputs.eSignCostPerSignature.value = state.eSignCostPerSignature;
     inputs.manualCostPerSignature.value = state.manualCostPerSignature;
+    inputs.netGainPerSignature.value = state.netGainPerSignature;
 
     inputs.useDefaults.checked = !!state.useDefaults;
     inputs.minCurrentTotal.value = state.minCurrentTotal;
@@ -381,6 +409,8 @@
 
     inputs.oneOffCost.value = state.oneOffCost;
     inputs.annualCost.value = state.annualCost;
+    inputs.contraAnnualCost.value = state.contraAnnualCost;
+    inputs.factualAnnualCost.value = state.factualAnnualCost;
     inputs.years.value = state.years;
     inputs.discountRate.value = state.discountRate;
 
@@ -393,6 +423,7 @@
       signersAvg: clamp(Math.round(num(inputs.signersAvg.value)), 1, 3),
       eSignCostPerSignature: Math.max(0, num(inputs.eSignCostPerSignature.value)),
       manualCostPerSignature: Math.max(0, num(inputs.manualCostPerSignature.value)),
+      netGainPerSignature: Math.max(0, num(inputs.netGainPerSignature.value)),
 
       useDefaults: !!inputs.useDefaults.checked,
       minCurrentTotal: Math.max(0, num(inputs.minCurrentTotal.value)),
@@ -409,6 +440,8 @@
 
       oneOffCost: Math.max(0, num(inputs.oneOffCost.value)),
       annualCost: Math.max(0, num(inputs.annualCost.value)),
+      contraAnnualCost: Math.max(0, num(inputs.contraAnnualCost.value)),
+      factualAnnualCost: Math.max(0, num(inputs.factualAnnualCost.value)),
       years: Math.max(1, Math.round(num(inputs.years.value))),
       discountRate: Math.max(0, num(inputs.discountRate.value)),
     };
@@ -455,12 +488,22 @@
     // Positive = eSign is more expensive than manual on pure unit cost
     const annualSignatureDelta = annualESignatureCost - annualManualSignatureCost;
 
-    // Benefit: time savings in kr minus any signature cost increase
-    const annualBenefit = internalKrSaved - annualSignatureDelta;
+    // Benefit logic: if a per-signature net gain estimate is provided use that;
+    // otherwise fall back to time-savings minus signature delta.
+    let annualBenefit;
+    if (state.netGainPerSignature > 0) {
+      annualBenefit = signaturesPerYear * state.netGainPerSignature;
+    } else {
+      annualBenefit = internalKrSaved - annualSignatureDelta;
+    }
 
     const pvAnn = pvFactor(state.discountRate, state.years);
     const annualNet = annualBenefit - state.annualCost;
     const npv = (-state.oneOffCost) + annualNet * pvAnn;
+
+    const contrafactualCost = state.contraAnnualCost;
+    const factualCost = state.factualAnnualCost;
+    const avoidedCost = contrafactualCost - factualCost;
 
     const citizenHoursSaved = state.includeCitizenTime
       ? (docs * (state.citizenShare / 100) * state.minCitizenSaved) / 60
@@ -479,6 +522,9 @@
       annualBenefit,
       annualNet,
       npv,
+      contrafactualCost,
+      factualCost,
+      avoidedCost,
       citizenHoursSaved
     };
   }
@@ -487,22 +533,27 @@
     const side = $("sideKpis");
     side.innerHTML = "";
 
-    const items = [
-      { t: "Timer spart per år (internt)", v: fmtHr(calc.hoursSavedInternal) },
-      { t: "Årsverk spart per år", v: (Math.round(calc.fteSaved * 100) / 100).toLocaleString("nb-NO") },
-      { t: "Årlig kostnad eSignering", v: fmtKr(calc.annualESignatureCost) },
-      { t: "Årlig kostnad manuell signering", v: fmtKr(calc.annualManualSignatureCost) },
-      { t: "Brutto (tidsgevinst − merkost signatur)", v: fmtKr(calc.annualBenefit) },
-    ];
+    // Total annual gain = avoided cost + time-based savings
+    const totalGain = calc.avoidedCost + calc.internalKrSaved;
+    const costCutPart = calc.avoidedCost;
+    const timeSavingsPart = calc.internalKrSaved;
 
-    if (state.includeCitizenTime) {
-      items.push({ t: "Timer spart for brukere per år", v: fmtHr(calc.citizenHoursSaved) });
-    }
+    const items = [
+      { t: "Årlig gevinst (total)", v: fmtKr(totalGain), primary: true },
+      { t: "Hvorav kostnadskutt", v: fmtKr(costCutPart) },
+      { t: "Hvorav tidsgevinst", v: fmtKr(timeSavingsPart) },
+    ];
 
     items.forEach(x => {
       const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `<div class="t">${x.t}</div><div class="v">${x.v}</div>`;
+      div.className = "item" + (x.primary ? " primary" : "");
+      if (x.primary) {
+        div.style.cssText = "border: 2px solid #111; background: #f9f9f9; padding: 16px; font-size: 14px; margin-bottom: 10px;";
+        div.innerHTML = `<div class="t" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">${x.t}</div><div class="v" style="font-size: 28px; margin-top: 8px;">${x.v}</div>`;
+      } else {
+        div.style.cssText = "border: 1px solid #e0e0e0; padding: 12px; border-radius: 8px; margin-bottom: 8px;";
+        div.innerHTML = `<div class="t" style="font-size: 12px; color: #666;">${x.t}</div><div class="v" style="font-size: 18px; font-weight: 600; margin-top: 4px;">${x.v}</div>`;
+      }
       side.appendChild(div);
     });
   }
@@ -537,6 +588,7 @@
       ["Signaturer per år (docs × signatarer)", fmtInt(calc.signaturesPerYear)],
       ["Kostnad per elektronisk signatur", fmtKr(state.eSignCostPerSignature)],
       ["Kostnad per manuell signatur", fmtKr(state.manualCostPerSignature)],
+      ["Gevinst per signatur (brukt)", fmtKr(state.netGainPerSignature)],
 
       ["Dagens minutter per dokument (inkl signatarer)", fmtInt(calc.minCur)],
       ["Med eSignering: minutter per dokument (inkl signatarer)", fmtInt(calc.minFut)],
@@ -551,6 +603,8 @@
 
       ["Engangskostnad", fmtKr(state.oneOffCost)],
       ["Årlig drift/forvaltning", fmtKr(state.annualCost)],
+      ["Kontrafaktisk årlig kostnad", fmtKr(state.contraAnnualCost)],
+      ["Faktisk årlig kostnad", fmtKr(state.factualAnnualCost)],
       ["Analysehorisont", fmtInt(state.years) + " år"],
       ["Diskonteringsrente", state.discountRate.toLocaleString("nb-NO") + " %"],
     ];
@@ -571,90 +625,146 @@
     $("exportBox").classList.add("hide");
   }
 
-  let step = 1;
+  function renderTimeChart(calc, state) {
+    const svg = $("timeChart");
+    const w = svg.clientWidth || 300;
+    const h = svg.clientHeight || 140;
+    const pad = 40;
+    const chartW = w - pad * 2;
+    const chartH = h - pad - 20;
 
-  function renderStepHeader() {
-    $("stepTitle").textContent = steps[step - 1].title;
-    $("stepHint").textContent = steps[step - 1].hint;
+    // if scenario costs exist, show hours comparison
+    if (state.contraAnnualCost || state.factualAnnualCost) {
+      const contraHours = (state.contraAnnualCost || 0) / state.hourlyRate;
+      const gainHours = Math.max(0, (state.contraAnnualCost - state.factualAnnualCost) || 0) / state.hourlyRate;
+      const maxVal = Math.max(contraHours, gainHours, 1);
+      const scale = chartH / maxVal;
 
-    const chips = $("stepChips");
-    chips.innerHTML = "";
-    steps.forEach(s => {
-      const div = document.createElement("div");
-      div.className = "chip" + (s.n === step ? " active" : "") + (s.n < step ? " done" : "");
-      div.textContent = String(s.n);
-      div.title = s.title;
-      div.style.cursor = "pointer";
-      div.addEventListener("click", () => { goToStep(s.n, { validate: false }); });
-      chips.appendChild(div);
-    });
+      const barW = chartW / 3;
+      const gap = barW * 0.5;
 
-    $("btnPrev").disabled = step === 1;
-    $("btnNext").textContent = step === 5 ? "Ferdig" : "Neste";
+      const x1 = pad + barW * 0.5;
+      const h1 = contraHours * scale;
+      const y1 = pad + chartH - h1;
+
+      const x2 = x1 + barW + gap;
+      const h2 = gainHours * scale;
+      const y2 = pad + chartH - h2;
+
+      svg.innerHTML = `
+        <line x1="${pad}" y1="${pad + chartH}" x2="${w - pad}" y2="${pad + chartH}" stroke="#ccc" stroke-width="1" />
+        <rect x="${x1 - barW/2}" y="${y1}" width="${barW}" height="${h1}" fill="#c44" rx="2" />
+        <rect x="${x2 - barW/2}" y="${y2}" width="${barW}" height="${h2}" fill="#44c" rx="2" />
+        <text x="${x1}" y="${h - 12}" text-anchor="middle" font-size="11" fill="#666">
+            <tspan x="${x1}" dy="0">Kontrafaktisk</tspan>
+            <tspan x="${x1}" dy="1.2em">saksbehandling</tspan>
+        </text>
+        <text x="${x2}" y="${h - 12}" text-anchor="middle" font-size="11" fill="#666">
+            <tspan x="${x2}" dy="0">Gevinst fra</tspan>
+            <tspan x="${x2}" dy="1.2em">eSignering</tspan>
+        </text>
+        <text x="${x1}" y="${y1 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtHr(contraHours)}</text>
+        <text x="${x2}" y="${y2 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtHr(gainHours)}</text>
+      `;
+      return;
+    }
+
+    // default behaviour
+    const internalTime = calc.internalKrSaved || 0;
+    const citizenTime = calc.citizenHoursSaved * state.hourlyRate || 0;
+    const totalTime = internalTime + citizenTime;
+
+    if (totalTime <= 0) {
+      svg.innerHTML = `<text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="13" fill="#999">Ingen tidsgevinster beregnet</text>`;
+      return;
+    }
+
+    const maxVal = Math.max(internalTime, totalTime, 1);
+    const scale = chartH / maxVal;
+
+    const barW = chartW / (citizenTime > 0 ? 4 : 3);
+    const gap = barW * 0.5;
+
+    const x1 = pad + barW * 0.5;
+    const h1 = internalTime * scale;
+    const y1 = pad + chartH - h1;
+
+    let html = `
+      <line x1="${pad}" y1="${pad + chartH}" x2="${w - pad}" y2="${pad + chartH}" stroke="#ccc" stroke-width="1" />
+      <rect x="${x1 - barW/2}" y="${y1}" width="${barW}" height="${h1}" fill="#f59e0b" rx="2" />
+      <text x="${x1}" y="${h - 5}" text-anchor="middle" font-size="11" fill="#666">Intern tid</text>
+      <text x="${x1}" y="${y1 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtInt(internalTime)}</text>
+    `;
+
+    if (citizenTime > 0) {
+      const x2 = x1 + barW + gap;
+      const h2 = citizenTime * scale;
+      const y2 = pad + chartH - h2;
+
+      html += `
+        <rect x="${x2 - barW/2}" y="${y2}" width="${barW}" height="${h2}" fill="#06b6d4" rx="2" />
+        <text x="${x2}" y="${h - 5}" text-anchor="middle" font-size="11" fill="#666">Bruker tid</text>
+        <text x="${x2}" y="${y2 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtInt(citizenTime)}</text>
+      `;
+    }
+
+    svg.innerHTML = html;
   }
 
-  function showStep(n) {
-    document.querySelectorAll(".step").forEach(el => {
-      el.classList.toggle("hide", Number(el.dataset.step) !== n);
-    });
+  function renderChart(state) {
+    const svg = $("costChart");
+    const w = svg.clientWidth || 300;
+    const h = svg.clientHeight || 140;
+    const pad = 40;
+    const chartW = w - pad * 2;
+    const chartH = h - pad - 20;
+
+    // if scenario costs provided, show bar chart
+    if (state.contraAnnualCost || state.factualAnnualCost) {
+      const contra = state.contraAnnualCost || 0;
+      const factual = state.factualAnnualCost || 0;
+      const avoided = Math.max(0, contra - factual);
+      const maxVal = Math.max(contra, factual, avoided, 1);
+      const scale = chartH / maxVal;
+
+      const barW = chartW / 4;
+      const gap = barW * 0.5;
+
+      // bar 1: contrafactual (red)
+      const x1 = pad + barW * 0.5;
+      const h1 = contra * scale;
+      const y1 = pad + chartH - h1;
+
+      // compute only two bars: contrafactual and gain
+      const gain = Math.max(0, contra - factual);
+      const x2 = x1 + barW + gap;
+      const h2 = gain * scale;
+      const y2 = pad + chartH - h2;
+
+      svg.innerHTML = `
+        <!-- baseline -->
+        <line x1="${pad}" y1="${pad + chartH}" x2="${w - pad}" y2="${pad + chartH}" stroke="#ccc" stroke-width="1" />
+        
+        <!-- bars -->
+        <rect x="${x1 - barW/2}" y="${y1}" width="${barW}" height="${h1}" fill="#c44" rx="2" />
+        <rect x="${x2 - barW/2}" y="${y2}" width="${barW}" height="${h2}" fill="#44c" rx="2" />
+        
+        <!-- labels -->
+        <text x="${x1}" y="${h - 5}" text-anchor="middle" font-size="11" fill="#666">Kontrafaktisk</text>
+        <text x="${x2}" y="${h - 5}" text-anchor="middle" font-size="11" fill="#666">Gevinst</text>
+        
+        <!-- values on bars -->
+        <text x="${x1}" y="${y1 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtInt(contra)}</text>
+        <text x="${x2}" y="${y2 - 5}" text-anchor="middle" font-size="10" font-weight="600" fill="#333">${fmtInt(gain)}</text>
+      `;
+      return;
+    }
+
+    // fallback: simple message when no scenario data
+    svg.innerHTML = `<text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="13" fill="#999">Fyll inn kontrafaktisk og faktisk årlig kostnad for å se kostnadssammenlikning</text>`;
   }
 
-  function setError(msg) {
-    const box = $("errorBox");
-    if (!msg) { box.classList.add("hide"); box.textContent = ""; return; }
-    box.textContent = msg;
-    box.classList.remove("hide");
-    box.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function validateStep(n, state) {
-    if (n === 1) {
-      if (state.docsPerYear <= 0) return "Antall dokument per år må være større enn 0.";
-      if (state.eSignCostPerSignature < 0 || state.manualCostPerSignature < 0) return "Kostnader kan ikke være negative.";
-    }
-    if (n === 2) {
-      if (!state.useDefaults) {
-        if (state.minCurrentTotal < 0 || state.minFutureTotal < 0) return "Minutter kan ikke være negative.";
-        if (state.minExtraSignerCurrent < 0 || state.minExtraSignerFuture < 0) return "Minutter kan ikke være negative.";
-      }
-      if (!state.useDefaults && state.minFutureTotal > state.minCurrentTotal) {
-        return "Sjekk tidsanslag: eSignering er satt til mer tid enn dagens prosess. Det kan være riktig, men er uvanlig.";
-      }
-    }
-    if (n === 3) {
-      if (state.hourlyRate < 0) return "Timekost kan ikke være negativt.";
-      if (state.hoursPerFTE <= 0) return "Timer per årsverk må være større enn 0.";
-      if (state.includeCitizenTime) {
-        if (state.citizenShare < 0 || state.citizenShare > 100) return "Andel bruker-oppdrag må være mellom 0 og 100.";
-      }
-    }
-    if (n === 4) {
-      if (state.years < 1) return "Analysehorisont må være minst 1 år.";
-      if (state.discountRate < 0) return "Diskonteringsrente kan ikke være negativ.";
-    }
-    return "";
-  }
-
-  function goToStep(n, { validate = true } = {}) {
-    const state = uiToState();
-    if (validate) {
-      const msg = validateStep(step, state);
-      if (msg) { setError(msg); return; }
-    }
-    setError("");
-    step = clamp(n, 1, 5);
-    renderStepHeader();
-    showStep(step);
-
-    const state2 = applyDefaultsIfNeeded(state);
-    const calc = compute(state2);
-    renderSideKPIs(calc, state2);
-    if (step === 5) renderFinal(calc, state2);
-
-    writeState(state2);
-  }
-
-  function onAnyChange() {
+  function updateDisplay() {
     const state = uiToState();
     inputs.citizenWrap.classList.toggle("hide", !state.includeCitizenTime);
     toggleDefaultsUI(state.useDefaults);
@@ -664,18 +774,14 @@
 
     const calc = compute(state2);
     renderSideKPIs(calc, state2);
-    if (step === 5) renderFinal(calc, state2);
+    renderFinal(calc, state2);
+    renderChart(state2);
+    renderTimeChart(calc, state2);
   }
 
   document.querySelectorAll("input, select").forEach(el => {
-    el.addEventListener("input", onAnyChange);
-    el.addEventListener("change", onAnyChange);
-  });
-
-  $("btnPrev").addEventListener("click", () => goToStep(step - 1));
-  $("btnNext").addEventListener("click", () => {
-    if (step === 5) return;
-    goToStep(step + 1, { validate: true });
+    el.addEventListener("input", updateDisplay);
+    el.addEventListener("change", updateDisplay);
   });
 
   $("btnPrint").addEventListener("click", () => window.print());
@@ -684,12 +790,7 @@
     localStorage.removeItem(LS_KEY);
     const state = { ...defaults };
     loadToUI(state);
-    setError("");
-    step = 1;
-    renderStepHeader();
-    showStep(step);
-    const calc = compute(state);
-    renderSideKPIs(calc, state);
+    updateDisplay();
   });
 
   $("btnExport").addEventListener("click", () => {
@@ -722,10 +823,7 @@
 
   const state0 = readState();
   loadToUI(state0);
-  renderStepHeader();
-  showStep(step);
-  const calc0 = compute(state0);
-  renderSideKPIs(calc0, state0);
+  updateDisplay();
 })();
 </script>
 </body>
