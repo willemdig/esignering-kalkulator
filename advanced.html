@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Avansert Kalkulator</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      background: #f6f7f9;
+      color: #111;
+    }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #ccc;
+      padding: 20px;
+      text-align: center;
+    }
+    main {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    form {
+      display: grid;
+      gap: 20px;
+    }
+    label {
+      display: block;
+      font-size: 16px;
+    }
+    input[type="number"], select {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 20px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Avansert Kalkulator</h1>
+  </header>
+  <main>
+    <form id="advancedForm">
+      <label>
+        Antall dokumenter per år:
+        <input type="number" id="docsPerYear" />
+      </label>
+      <label>
+        Gjennomsnittlig antall signatarer per dokument:
+        <select id="signersAvg">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3+</option>
+        </select>
+      </label>
+      <label>
+        Kostnad per elektronisk signatur (kr):
+        <input type="number" id="eSignCostPerSignature" />
+      </label>
+      <label>
+        Kostnad per manuell signatur (kr):
+        <input type="number" id="manualCostPerSignature" />
+      </label>
+      <label>
+        Gevinst per signatur (kr):
+        <input type="number" id="netGainPerSignature" />
+      </label>
+      <button id="calculateButton">Beregn</button>
+    </form>
+    <p id="result"></p>
+  </main>
+
+  <script>
+    const calculateButton = document.getElementById('calculateButton');
+    const result = document.getElementById('result');
+
+    calculateButton.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      const docsPerYear = parseFloat(document.getElementById('docsPerYear').value);
+      const signersAvg = parseFloat(document.getElementById('signersAvg').value);
+      const eSignCost = parseFloat(document.getElementById('eSignCostPerSignature').value);
+      const manualCost = parseFloat(document.getElementById('manualCostPerSignature').value);
+      const netGain = parseFloat(document.getElementById('netGainPerSignature').value);
+
+      if (!isNaN(docsPerYear) && !isNaN(signersAvg) && !isNaN(eSignCost) && !isNaN(manualCost) && !isNaN(netGain)) {
+        const totalCost = docsPerYear * signersAvg * (manualCost - eSignCost) + docsPerYear * netGain;
+        result.textContent = `Total gevinst: ${totalCost.toFixed(2)} kr`;
+      } else {
+        result.textContent = 'Vennligst fyll inn alle feltene med gyldige verdier.';
+      }
+    });
+  </script>
+</body>
+</html>

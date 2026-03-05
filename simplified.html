@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forenklet Kalkulator</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      background: #f6f7f9;
+      color: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      text-align: center;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    input[type="number"] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 20px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Forenklet Kalkulator</h1>
+    <label>
+      Antall dokumenter per år:
+      <input type="number" id="docsPerYear" />
+    </label>
+    <label>
+      Kostnad per signatur (kr):
+      <input type="number" id="costPerSignature" />
+    </label>
+    <button id="calculateButton">Beregn</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    const calculateButton = document.getElementById('calculateButton');
+    const result = document.getElementById('result');
+
+    calculateButton.addEventListener('click', () => {
+      const docsPerYear = parseFloat(document.getElementById('docsPerYear').value);
+      const costPerSignature = parseFloat(document.getElementById('costPerSignature').value);
+
+      if (!isNaN(docsPerYear) && !isNaN(costPerSignature)) {
+        const totalCost = docsPerYear * costPerSignature;
+        result.textContent = `Total kostnad: ${totalCost.toFixed(2)} kr`;
+      } else {
+        result.textContent = 'Vennligst fyll inn gyldige verdier.';
+      }
+    });
+  </script>
+</body>
+</html>
